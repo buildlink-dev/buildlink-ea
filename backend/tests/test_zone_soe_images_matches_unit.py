@@ -1,14 +1,18 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts.import_zone_soe_images_matches import (
     ImageIn,
     _hard,
     _raw_url,
+    _run_crawled_at,
     _should_hold_low_res,
     load_decisions,
     load_input_rows,
     resolve_spu_code,
+    should_force_replace,
     zsoe_spu_code,
 )
 
@@ -45,6 +49,44 @@ def test_load_matches_json_preferred_shape(tmp_path: Path):
     assert rows[0].material_name == "水泥"
     assert rows[0].material_category_code == "02"
     assert rows[0].images == [ImageIn(kind="MAIN", rel_path="images/19396354/main_01.jpg", source_url="https://oss.example/a.jpg")]
+
+
+def test_load_matches_json_manual_upload_shape(tmp_path: Path):
+    # 人工补图批次:platform_code 给 SPU 身份、无 offer_id、无 matched_category_path
+    (tmp_path / "images" / "MG-P034BCC408609").mkdir(parents=True)
+    (tmp_path / "images" / "MG-P034BCC408609" / "main_01.png").write_bytes(b"x")
+    (tmp_path / "matches.json").write_text(json.dumps([{
+        "platform_code": "MG-P034BCC408609",
+        "material_name": "Plascon耐碱底漆",
+        "material_category_code": "07",
+        "material_category_name": "油漆涂料",
+        "source": "manual_upload",
+        "images": {"main": ["images/MG-P034BCC408609/main_01.png"], "detail": []},
+    }], ensure_ascii=False), encoding="utf-8")
+
+    rows = load_input_rows(tmp_path)
+
+    assert len(rows) == 1
+    assert rows[0].spu_code == "MG-P034BCC408609"
+    assert rows[0].source == "manual_upload"
+    assert rows[0].offer_id == "manual_upload"  # 无 offer 时用 source 兜底,不能留空
+    assert rows[0].matched_category_path == []
+
+
+def test_load_matches_json_rejects_row_without_offer_id_or_source(tmp_path: Path):
+    (tmp_path / "matches.json").write_text(json.dumps([{
+        "material_name": "水泥", "images": {"main": []},
+    }], ensure_ascii=False), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="offer_id/source"):
+        load_input_rows(tmp_path)
+
+
+def test_run_crawled_at_falls_back_to_dir_name(tmp_path: Path):
+    # 人工批次没有 run.json,台账仍须留下批次标识
+    batch = tmp_path / "手动补图_0727_41条"
+    batch.mkdir()
+    assert _run_crawled_at(batch) == "手动补图_0727_41条"
 
 
 def test_load_offer_tree_uses_product_name_as_material_name(tmp_path: Path):
@@ -119,6 +161,58 @@ def test_resolve_spu_code_refuses_ambiguous_name_without_category():
 
     assert got is None
     assert "材料名重名" in reason
+
+
+def test_resolve_spu_code_trusts_platform_code_when_name_agrees():
+    row = type("Row", (), {
+        "spu_code": zsoe_spu_code("02", "水泥"),
+        "material_category_code": "02",
+        "material_name": "水泥",
+    })()
+    material_index = {"水泥": [{"cat_code": "02", "cat_name": "水泥类", "name": "水泥",
+                              "spu_code": zsoe_spu_code("02", "水泥")}]}
+
+    got, reason = resolve_spu_code(row, material_index)
+
+    assert reason is None
+    assert got == zsoe_spu_code("02", "水泥")
+
+
+def test_resolve_spu_code_refuses_platform_code_conflicting_with_name():
+    # 数据包串行:spu_code 指 A、材料名唯一命中 B → 必须拒绝,否则图挂到错商品上
+    row = type("Row", (), {
+        "spu_code": zsoe_spu_code("02", "水泥"),
+        "material_category_code": "01",
+        "material_name": "钢筋",
+    })()
+    material_index = {"钢筋": [{"cat_code": "01", "cat_name": "钢筋类", "name": "钢筋",
+                              "spu_code": zsoe_spu_code("01", "钢筋")}]}
+
+    got, reason = resolve_spu_code(row, material_index)
+
+    assert got is None
+    assert "spu_code 与材料名不符" in reason
+
+
+def test_resolve_spu_code_keeps_platform_code_when_name_unresolvable():
+    # 名字定位不了(不在表/重名消不掉)时不推翻 spu_code,仍按 spu_code 走
+    row = type("Row", (), {
+        "spu_code": "MG-PXXXX", "material_category_code": None, "material_name": "表外材料",
+    })()
+
+    got, reason = resolve_spu_code(row, {})
+
+    assert reason is None
+    assert got == "MG-PXXXX"
+
+
+def test_should_force_replace_manual_upload_bypasses_low_res_gate():
+    manual = type("Row", (), {"source": "manual_upload", "material_name": "Plascon铝漆"})()
+    crawled = type("Row", (), {"source": "", "material_name": "Plascon铝漆"})()
+
+    assert should_force_replace(manual, set()) is True
+    assert should_force_replace(crawled, set()) is False
+    assert should_force_replace(crawled, {_hard("Plascon铝漆")}) is True
 
 
 def test_should_hold_low_res_truth_table():
