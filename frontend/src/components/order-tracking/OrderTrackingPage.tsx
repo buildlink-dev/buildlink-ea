@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   Package,
@@ -99,12 +100,12 @@ function OrderList({
           <Package className="h-12 w-12 text-slate-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-navy mb-2">{t("emptyTitle")}</h3>
           <p className="text-sm text-muted mb-5">{t("emptyDesc")}</p>
-          <a
+          <Link
             href="/mall"
             className="inline-flex items-center gap-2 rounded-full bg-teal-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
           >
             {t("emptyBrowse")}
-          </a>
+          </Link>
         </div>
       )}
     </div>
