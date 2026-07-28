@@ -27,6 +27,19 @@ matches.json 为数组,每条至少包含:
       }
     }
 
+人工补图批次(九云手动上传,没有 offer 来源)用 platform_code 直接给 SPU 身份:
+
+    {
+      "platform_code": "MG-P034BCC408609",
+      "material_name": "Plascon耐碱底漆",
+      "material_category_code": "07",
+      "source": "manual_upload",
+      "images": {"main": ["images/MG-P034BCC408609/main_01.png"], "detail": []}
+    }
+
+此形态无 offer_id(用 source 兜底做图片来源标记)、无 matched_category_path(不动分类),
+且 source=manual_upload 视同人工确认,不受低清 hold 门槛约束。
+
 也兼容另一种 offer 目录树结构:
 
     run_YYYYMMDD_HHMMSS/
@@ -106,6 +119,7 @@ DECISIONS_PATH = _REPO_ROOT / "data" / "zone_import" / "soe_refresh_decisions.js
 THUMB_SIZE = (300, 300)
 THUMB_WEBP_QUALITY = 80
 MIN_COVER_SIDE = 600  # 最佳主图 min(宽,高) 低于此 → 判低清、hold 不替换
+MANUAL_SOURCE = "manual_upload"  # 人工上传批次:图由人挑过,低清门槛对它无意义
 
 LEDGER_FIELDS = [
     "spu_code", "material_name", "offer_id", "run_crawled_at", "updated_at",
@@ -175,6 +189,7 @@ class MatchIn:
     matched_category_path: list[str]
     images: list[ImageIn]
     base_dir: Path
+    source: str = ""
 
 
 def _normalize_image_item(kind: str, item: object) -> ImageIn:
@@ -210,12 +225,16 @@ def load_matches_json(source_dir: Path) -> list[MatchIn]:
         if not isinstance(item, dict):
             raise ValueError(f"matches.json 第 {i} 项不是对象")
         material_name = str(item.get("material_name") or "").strip()
-        offer_id = str(item.get("offer_id") or "").strip()
+        source = str(item.get("source") or "").strip()
+        # 人工补图批次没有 offer,用 source 兜底当图片来源标记(进文件名前缀与台账 offer_id 列)。
+        offer_id = str(item.get("offer_id") or "").strip() or source
+        # platform_code 是我方 SPU code,与 spu_code 同义,数据包两种写法都收。
+        spu_code = str(item.get("spu_code") or item.get("platform_code") or "").strip()
         images = item.get("images") or {}
         if not material_name:
             raise ValueError(f"matches.json 第 {i} 项缺少 material_name")
         if not offer_id:
-            raise ValueError(f"matches.json 第 {i} 项缺少 offer_id")
+            raise ValueError(f"matches.json 第 {i} 项缺少 offer_id/source")
         if not isinstance(images, dict):
             raise ValueError(f"matches.json 第 {i} 项 images 必须是对象")
         matched_category_path = item.get("matched_category_path") or []
@@ -227,13 +246,14 @@ def load_matches_json(source_dir: Path) -> list[MatchIn]:
             material_name=material_name,
             material_category_code=(str(item.get("material_category_code")).strip() if item.get("material_category_code") else None),
             material_category_name=(str(item.get("material_category_name")).strip() if item.get("material_category_name") else None),
-            spu_code=(str(item.get("spu_code")).strip() if item.get("spu_code") else None),
+            spu_code=spu_code or None,
             offer_id=offer_id,
             offer_url=(str(item.get("offer_url")).strip() if item.get("offer_url") else None),
             listing_title=(str(item.get("listing_title")).strip() if item.get("listing_title") else None),
             matched_category_path=[str(x) for x in matched_category_path],
             images=_images_from_matches(images),
             base_dir=source_dir,
+            source=source,
         ))
     return rows
 
@@ -298,13 +318,15 @@ def load_material_index() -> dict[str, list[dict]]:
 
 
 def _run_crawled_at(source_dir: Path) -> str:
+    """台账"本条基于哪一版"。爬取批次读 run.json;人工补图批次没有 run.json,
+    退回用交付目录名——总得留下可追溯的批次标识,不能留空。"""
     path = source_dir / "run.json"
     if not path.exists():
-        return ""
+        return source_dir.name
     try:
-        return str(json.loads(path.read_text(encoding="utf-8")).get("crawled_at") or "")
+        return str(json.loads(path.read_text(encoding="utf-8")).get("crawled_at") or "") or source_dir.name
     except Exception:  # noqa: BLE001
-        return ""
+        return source_dir.name
 
 
 async def _zone_product_codes(db: AsyncSession, zone_code: str) -> set[str]:
@@ -352,24 +374,40 @@ def load_decisions(path: Path = DECISIONS_PATH) -> Decisions:
     return Decisions(overrides, drops, aliases, detail_cover, force_replace)
 
 
+def _unique_candidate(candidates: list[dict], cat_code: str | None) -> dict | None:
+    """材料名的唯一命中;重名时靠 material_category_code 消歧,消不掉返回 None。"""
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1 and cat_code:
+        matched = [c for c in candidates if c["cat_code"] == cat_code]
+        if len(matched) == 1:
+            return matched[0]
+    return None
+
+
 def resolve_spu_code(
     row: MatchIn, material_index: dict[str, list[dict]], name_overrides: dict[str, str] | None = None
 ) -> tuple[str | None, str | None]:
-    if row.spu_code:
-        return row.spu_code, None
-
     # 名字优先:按材料名匹配专区商品。material_category_code 只在材料名重名时用来消歧,
     # 不作硬约束——数据包可能把大类填错(如"区域报警器"填 13 应 12),但只要商品名对得上就该回挂。
     # 名字覆盖:数据包把一个 SPU 按规格拆成多条时,覆盖到我方实际商品名(如 金刚石切割片(有豁口)->金刚石切割片)。
     lookup_name = (name_overrides or {}).get(_hard(row.material_name), row.material_name)
     candidates = material_index.get(_hard(lookup_name), [])
-    if len(candidates) == 1:
-        return candidates[0]["spu_code"], None
-    if len(candidates) > 1:
-        if row.material_category_code:
-            matched = [c for c in candidates if c["cat_code"] == row.material_category_code]
-            if len(matched) == 1:
-                return matched[0]["spu_code"], None
+    unique = _unique_candidate(candidates, row.material_category_code)
+
+    if row.spu_code:
+        # 数据包同时给了 spu_code(platform_code)和材料名 → 两者必须指同一个商品。
+        # 名字能唯一定位却与 spu_code 不符,多半是数据包串行;静默信任 spu_code 会把图挂到错商品上。
+        if unique and unique["spu_code"] != row.spu_code:
+            return None, (
+                f"spu_code 与材料名不符:{row.spu_code} vs "
+                f"{unique['cat_code']}/{unique['name']}={unique['spu_code']}"
+            )
+        return row.spu_code, None
+
+    if unique:
+        return unique["spu_code"], None
+    if candidates:
         detail = ", ".join(f"{c['cat_code']}/{c['cat_name']}/{c['name']}" for c in candidates)
         return None, f"材料名重名,需 material_category_code 消歧:{row.material_name} -> {detail}"
     return None, f"材料名不在央企材料表:{row.material_name}"
@@ -572,6 +610,12 @@ def _should_hold_low_res(best_main: int, min_cover_side: int, force_replace: boo
     return best_main < min_cover_side and not force_replace
 
 
+def should_force_replace(row: MatchIn, force_replace_names: set[str]) -> bool:
+    """低清门槛是拦爬虫缩略图的:等更好的候选。人工上传批次(source=manual_upload)图是人挑过的,
+    没有更好的候选可等,hold 只会让商品继续无图 → 等同 force_replace 白名单。"""
+    return row.source == MANUAL_SOURCE or _hard(row.material_name) in force_replace_names
+
+
 def _thumb_is_fresh(original_path: Path, thumb_path: Path) -> bool:
     try:
         return (
@@ -722,8 +766,8 @@ async def run_import(
         ranked, best_main = _rank_images(row, images, allow_detail_cover)
 
         # 低清 hold:最佳主图 < 门槛 → 整条不替换,记台账待复核
-        # force_replace 白名单例外:人工确认过就要这张图,低清也照换。
-        force_replace = _hard(row.material_name) in decisions.force_replace
+        # 例外:人工确认过就要这张图(force_replace 白名单 / 人工上传批次),低清也照换。
+        force_replace = should_force_replace(row, decisions.force_replace)
         if _should_hold_low_res(best_main, min_cover_side, force_replace):
             low_res.append(f"{spu_code} {row.material_name} best={best_main}px offer={row.offer_id}")
             stats["rows_low_res_held"] += 1
