@@ -2,8 +2,13 @@ name: PR Tests
 
 on:
   pull_request:
+  # push 只覆盖没有 PR 的分支(main / release-v*)。
+  # 功能分支由 pull_request 事件覆盖 —— 之前 push 的分支列表里也有 feat/** fix/** 等,
+  # 于是一个 PR 会同时被 push 和 pull_request 触发,跑两遍完全相同的 pytest;
+  # 而 concurrency key 用的是 github.ref(push 是 refs/heads/xxx、PR 是 refs/pull/N/merge),
+  # 两者不相等,互相取消不掉。
   push:
-    branches: ["main", "feature/**", "hotfix/**", "release-v**", "feat/**", "fix/**"]
+    branches: ["main", "release-v**"]
 
 # 同分支多次 push 只保留最新一个
 concurrency:
