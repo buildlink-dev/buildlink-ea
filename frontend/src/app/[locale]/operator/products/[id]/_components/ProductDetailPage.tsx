@@ -139,11 +139,11 @@ export default function ProductDetailPage() {
       await mutate();
       toastSuccess(newStatus === "ACTIVE" ? t("skuActivated") : t("skuDeactivated"));
     } catch (e) {
-      setSaveError(e instanceof ApiError ? e.message : t("actionError"));
+      setSaveError(e instanceof ApiError ? e.message : tList("actionError"));
     } finally {
       setSkuStatusLoading(null);
     }
-  }, [product, skuStatusConfirm, mutate, toastSuccess, t]);
+  }, [product, skuStatusConfirm, mutate, toastSuccess, t, tList]);
 
   // 进入编辑态
   const enterEditMode = useCallback(() => {
@@ -271,8 +271,12 @@ export default function ProductDetailPage() {
     try {
       await operatorProductsApi.update(product.id, spuForm);
       spuDirtyRef.current = false;
+      // mutate() 不会 reject（SWR 内部把 revalidate 的错误吞进 hook 的 error 里），
+      // 所以刷新失败不会被误判成保存失败；失败由上方的 refreshFailed 提示条呈现。
+      // 保持 await 在 exitEditMode 之前，是为了退出编辑态时看到的就是最新数据。
+      await mutate();
       toastSuccess(t("spuSaved"));
-      router.push(`/${locale}/operator/products`);
+      exitEditMode();
     } catch (err: unknown) {
       setSaveError(translateError(err));
     } finally {
@@ -444,8 +448,11 @@ export default function ProductDetailPage() {
   };
 
   // Loading / Error / 404
+  // 注意：这里只看 product，不看 error。写操作后的 mutate() 重新拉取若失败（瞬时 5xx /
+  // 网络抖动），SWR 会置上 error 但保留缓存的 data —— 此时页面应继续显示已有数据，
+  // 而不是把整页翻成「商品不存在」。首屏加载失败时 data 为空，由 !product 兜住。
   if (isLoading) return <DetailSkeleton />;
-  if (error || !product) {
+  if (!product) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Package className="h-12 w-12 text-slate-300" />
@@ -484,7 +491,6 @@ export default function ProductDetailPage() {
                 <button onClick={handleSpuSave} disabled={spuSaving} className="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
                   {spuSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{t("save")}
                 </button>
-                {canApprove && (product.status === "DRAFT" || product.status === "INACTIVE") && <button onClick={() => setConfirmModal({ type: "publish", loading: false })} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"><TrendingUp className="h-3.5 w-3.5" />{tList("publish")}</button>}
               </>
             ) : (
               <>
@@ -502,6 +508,12 @@ export default function ProductDetailPage() {
       <div className="max-w-[1400px] mx-auto px-6 py-6 flex flex-col lg:flex-row gap-6">
         {/* Left Column */}
         <div className="flex-1 flex flex-col gap-5 min-w-0">
+          {error && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" /><div className="flex-1">{t("refreshFailed")}</div>
+            </div>
+          )}
+
           {saveError && (
             <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 flex items-start gap-2">
               <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" /><div className="flex-1">{saveError}</div>

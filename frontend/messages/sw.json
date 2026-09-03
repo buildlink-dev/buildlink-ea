@@ -755,6 +755,7 @@
     "save": "Hifadhi",
     "cancelEdit": "Ghairi",
     "notFound": "Bidhaa haikupatikana au imefutwa",
+    "refreshFailed": "Imeshindwa kupakia data mpya. Unayoona yanaweza kuwa ya zamani — tafadhali onyesha upya ukurasa.",
     "basicInfo": "Taarifa za Msingi",
     "spuCode": "Msimbo wa SPU",
     "category": "Kategoria",
