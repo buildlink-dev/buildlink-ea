@@ -1,4 +1,0 @@
-external_sku_key,external_spu_key,source_row_no,sku_name_zh,sku_name_en,manufacturer_model,model_spec,dn,pn,interface,capacity_l,material,color_zh,unit,moq,is_default,price_min,price_max,lead_time_min,lead_time_max,packing_quantity,gross_weight_kg,volume_cbm,cargo_type,status,notes
-XIAYING-P120-B01-H42H-R01,XIAYING-P120-B01-H42H,1,H42H美标立式止回阀,,H42H,H42H,1/2''-12'',150-900Lb,,, , ,PCS,1,true,,,,,,,,,ACTIVE,范围型参数先建默认 SKU
-SHANHE-P25-B01-SQD-R01,SHANHE-P25-B01-SQD,1,SQD100-1.6/2.5 地上型,,SQD100-1.6/2.5,SQD100-1.6/2.5,100,1.6/2.5,65/65,,,红色,PCS,1,true,,,,,,,,,ACTIVE,参数表第 1 行
-SHANHE-P25-B01-SQD-R02,SHANHE-P25-B01-SQD,2,SQD150-1.6/2.5 地上型,,SQD150-1.6/2.5,SQD150-1.6/2.5,150,1.6/2.5,80/80,,,红色,PCS,1,false,,,,,,,,,ACTIVE,参数表第 2 行

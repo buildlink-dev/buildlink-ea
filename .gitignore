@@ -70,6 +70,7 @@ frontend/pnpm-workspace.yaml
 # ---- 工具/临时产物(不入库) ----
 .playwright-mcp/
 /output/
+/outputs/
 /tmp/
 
 # ---- 央企专区导入 pipeline:重产物本地保留,只入库 prepared/ 决策文件 + README ----
