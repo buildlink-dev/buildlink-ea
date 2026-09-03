@@ -139,11 +139,11 @@ export default function ProductDetailPage() {
       await mutate();
       toastSuccess(newStatus === "ACTIVE" ? t("skuActivated") : t("skuDeactivated"));
     } catch (e) {
-      setSaveError(e instanceof ApiError ? e.message : t("actionError"));
+      setSaveError(e instanceof ApiError ? e.message : tList("actionError"));
     } finally {
       setSkuStatusLoading(null);
     }
-  }, [product, skuStatusConfirm, mutate, toastSuccess, t]);
+  }, [product, skuStatusConfirm, mutate, toastSuccess, t, tList]);
 
   // 进入编辑态
   const enterEditMode = useCallback(() => {
