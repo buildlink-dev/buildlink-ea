@@ -101,6 +101,9 @@ jobs:
             BUILD_TIME=${{ env.BUILD_TIME }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
+          # 阿里云个人版 ACR 不认 provenance attestation 的 empty config
+          # (application/vnd.oci.empty.v1+json)，推送会被 denied。关掉。
+          provenance: false
 
       - name: 构建并推送 frontend 镜像
         uses: docker/build-push-action@v6
@@ -117,6 +120,9 @@ jobs:
             NEXT_PUBLIC_DEMO_EMAILS=${{ vars.DEMO_EMAILS }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+          # 阿里云个人版 ACR 不认 provenance attestation 的 empty config
+          # (application/vnd.oci.empty.v1+json)，推送会被 denied。关掉。
+          provenance: false
 
   # ── 部署到 ECS（测试/预发环境，从 ACR 拉取）──
   deploy-ecs:
