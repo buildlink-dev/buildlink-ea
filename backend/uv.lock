@@ -1268,6 +1268,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "google-cloud-translate" },
     { name = "greenlet" },
+    { name = "httpx" },
     { name = "jinja2" },
     { name = "openai" },
     { name = "openpyxl" },
@@ -1288,7 +1289,6 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -1306,7 +1306,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.110.0" },
     { name = "google-cloud-translate", specifier = ">=3.15.0" },
     { name = "greenlet", specifier = ">=3.0.0" },
-    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.26.0" },
+    { name = "httpx", specifier = ">=0.26.0" },
     { name = "jinja2", specifier = ">=3.1.0" },
     { name = "openai", specifier = ">=1.40.0" },
     { name = "openpyxl", specifier = ">=3.1.0" },

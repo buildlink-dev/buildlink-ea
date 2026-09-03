@@ -1,0 +1,7 @@
+owner_type,owner_key,attr_group,attr_key_zh,attr_key_en,attr_value_zh,attr_value_en,attr_unit,selectable,sort_order,notes
+SPU,XIAYING-P120-B01-H42H,基础参数,公称通径,Nominal Diameter,1/2''-12'',1/2''-12'',,false,1,
+SPU,XIAYING-P120-B01-H42H,基础参数,公称压力,Nominal Pressure,150-900Lb,150-900Lb,,false,2,
+SPU,XIAYING-P120-B01-H42H,基础参数,适用介质,Mediums,水、蒸汽、油品,"Water, steam, oil",,false,3,
+SKU,SHANHE-P25-B01-SQD-R01,规格参数,型号规格,Model,SQD100-1.6/2.5,SQD100-1.6/2.5,,true,1,
+SKU,SHANHE-P25-B01-SQD-R01,规格参数,公称通径,Nominal Diameter,100,100,mm,true,2,
+SKU,SHANHE-P25-B01-SQD-R01,规格参数,公称压力,Nominal Pressure,1.6/2.5,1.6/2.5,MPa,true,3,

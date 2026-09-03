@@ -29,16 +29,20 @@ RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g; s|security.debian.org|mirrors
     && rm -rf /var/lib/apt/lists/*
 
 # 装 uv(从阿里云 PyPI 镜像装,不走 ghcr.io 拉镜像层)
-RUN pip install --no-cache-dir uv==0.5.11
+RUN pip install --no-cache-dir uv==0.11.7
 
 WORKDIR /app
 
 # 先拷 lock 文件,利用 Docker layer 缓存(代码改不重装依赖)
 COPY pyproject.toml uv.lock ./
 
-# 装到固定 venv 路径,runtime 阶段直接拷
-RUN uv venv /opt/venv \
-    && VIRTUAL_ENV=/opt/venv uv pip install --no-cache -e .
+# 严格按 uv.lock 装,不做现场解析。
+# 之前是 `uv pip install -e .`,无视 lock 每次从 PyPI 现解析,导致镜像里的版本
+# 随上游漂移(openai 悄悄从 lock 的 2.38.0 跳到 3.7.0,传递依赖 httpx 消失、生产启动即崩)。
+# --no-install-project: builder 阶段只有 pyproject/lock、没有应用代码,只装依赖;
+#                       应用代码在 runtime 阶段拷入 /app,靠 PYTHONPATH 导入。
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+RUN uv sync --frozen --no-install-project
 
 # ============= runtime =============
 FROM python:3.11.10-slim AS runtime
@@ -47,7 +51,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONUTF8=1 \
     LANG=C.UTF-8 \
-    PATH="/opt/venv/bin:$PATH"
+    PATH="/opt/venv/bin:$PATH" \
+    PYTHONPATH=/app
 
 # 运行时只需要 libpq 和 curl(healthcheck 用)
 RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g; s|security.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources \
