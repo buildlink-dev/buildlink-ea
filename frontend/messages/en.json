@@ -755,6 +755,7 @@
     "save": "Save",
     "cancelEdit": "Cancel",
     "notFound": "Product not found or has been deleted",
+    "refreshFailed": "Failed to load the latest data. What you see may be out of date — please refresh the page.",
     "basicInfo": "Basic Information",
     "spuCode": "SPU Code",
     "category": "Category",
