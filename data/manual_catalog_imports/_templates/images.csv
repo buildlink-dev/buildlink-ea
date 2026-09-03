@@ -1,0 +1,3 @@
+owner_type,owner_key,image_type,sort_order,image_file,source_pdf,source_page,crop_note,spec_value,notes
+SPU,XIAYING-P120-B01-H42H,MAIN,0,,厦鹰图册.pdf,120,左上产品图,,待裁图
+SPU,SHANHE-P25-B01-SQD,MAIN,0,images/SHANHE-P25-B01-SQD/main.jpg,山河消防图册(2).pdf,25,上方两个产品图择一,,如果图片已裁好则填 image_file

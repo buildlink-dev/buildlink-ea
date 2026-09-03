@@ -37,13 +37,16 @@ dependencies = [
     "jinja2>=3.1.0",
     # 附件内容嗅探(libmagic 绑定)
     "python-magic>=0.4.27",
+    # 首方代码直接 import(tavily_client / translation_service)。
+    # 曾靠 openai 传递带入，openai 3.x 改依赖 httpx2 后传递依赖消失、生产启动即崩，
+    # 故必须声明为直接依赖。
+    "httpx>=0.26.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.23.0",
-    "httpx>=0.26.0",
     "pytest-cov>=4.1.0",
 ]
 
