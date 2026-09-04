@@ -133,7 +133,7 @@ if echo "${IMAGE_REGISTRY:-}" | grep -q "aliyuncs.com"; then
     fi
 elif [ -n "${GHCR_TOKEN:-}" ]; then
     echo "[deploy]       登录 GHCR..."
-    echo "$GHCR_TOKEN" | docker login ghcr.io --username github-actions --password-stdin
+    echo "$GHCR_TOKEN" | docker login ghcr.io --username "${GHCR_USERNAME:-github-actions}" --password-stdin
 fi
 export IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io/matgo-dev/buildreach}"
 docker compose -f "$COMPOSE_FILE" --env-file .env.production pull backend frontend
