@@ -113,6 +113,10 @@ jobs:
     if: (inputs.target == 'ovh' || inputs.target == 'both') && startsWith(github.ref_name, 'release-v')
     runs-on: ubuntu-latest
     environment: production
+    # 主机拉 GHCR 私有镜像用的是本次运行的 GITHUB_TOKEN,需要 packages 读权限
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: SSH 部署
         uses: appleboy/ssh-action@v1.0.3
@@ -132,7 +136,8 @@ jobs:
             git reset --hard "origin/$REF"
             DEPLOY_REF="origin/$REF" \
             IMAGE_TAG=${{ needs.resolve-tag.outputs.image_tag }} \
-            GHCR_TOKEN=${{ secrets.GHCR_TOKEN }} \
+            GHCR_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            GHCR_USERNAME=${{ github.actor }} \
             DEPLOY_API_BASE_URL=${{ secrets.OVH_PUBLIC_ORIGIN }} \
             DEPLOY_CORS_ORIGINS=${{ secrets.OVH_PUBLIC_ORIGIN }} \
               bash deploy/deploy.sh
