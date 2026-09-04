@@ -47,7 +47,7 @@ export function HeroBannerCarousel() {
   );
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const count = slides.length;
 
   const goTo = useCallback(

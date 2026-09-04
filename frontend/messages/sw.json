@@ -1266,6 +1266,7 @@
       "password": "Nenosiri",
       "accountStatus": "Hali ya Akaunti",
       "orgName": "Shirika",
+      "orgUscc": "Nambari ya Kitambulisho cha Kijamii Iliyounganishwa",
       "orgType": "Aina",
       "orgRole": "Jukumu",
       "orgStatus": "Hali",
@@ -1286,6 +1287,8 @@
       "enterNewEmail": "Ingiza barua pepe mpya",
       "enterNewPhone": "Ingiza nambari mpya ya simu",
       "enterNewUsername": "Ingiza jina jipya la mtumiaji",
+      "enterOrgName": "Ingiza jina la shirika",
+      "enterUscc": "Ingiza nambari ya kitambulisho cha kijamii iliyounganishwa",
       "enterCurrentPassword": "Ingiza nenosiri la sasa",
       "passwordMasked": "••••••••",
       "enterNewPassword": "Ingiza nenosiri jipya",
@@ -1315,6 +1318,7 @@
     },
     "errors": {
       "nameRequired": "Jina linahitajika",
+      "orgNameRequired": "Jina la shirika linahitajika",
       "sameAsCurrentEmail": "Sawa na barua pepe ya sasa",
       "sameAsCurrentPhone": "Sawa na simu ya sasa",
       "sameAsCurrentUsername": "Sawa na jina la sasa la mtumiaji",
@@ -1328,6 +1332,7 @@
     },
     "success": {
       "nameSaved": "Jina limesasishwa",
+      "orgSaved": "Taarifa za shirika zimesasishwa",
       "emailSaved": "Barua pepe imesasishwa",
       "phoneSaved": "Simu imesasishwa",
       "phoneCleared": "Simu imeondolewa",
