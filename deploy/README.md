@@ -162,6 +162,19 @@ bash deploy/deploy.sh
 | next-static | /_next/static/ | http://127.0.0.1:7857 | 365天 |
 | root | / | http://127.0.0.1:7857 | 禁用 |
 
+> **ECS 上 buildreach 监听 `:8080`,不是 `:80`。** 同一台机器上 fulfillment 的 vhost
+> (`/opt/1panel/www/conf.d/fulfillment.conf`)已占用 `listen 80` + 同一个 `server_name`,
+> 两者不能共存。buildreach 的 vhost 是 `/opt/1panel/www/conf.d/buildreach.conf`,
+> 除 `listen 8080` 外规则与上表一致。访问地址 **http://<ECS_HOST>:8080**。
+>
+> 因此 `deploy.yml` / `deploy-only.yml` 里 ECS 的 `DEPLOY_API_BASE_URL` 与
+> `DEPLOY_CORS_ORIGINS` **必须带 `:8080`** —— 少了端口,浏览器侧的 API 调用和
+> `/static/` 商品图会打到 `:80`,落进 fulfillment 那套。OVH 生产用
+> `OVH_PUBLIC_ORIGIN`,与此无关。
+>
+> openresty 容器是 host 网络模式,加端口不用改容器,改完 `nginx -t` 再
+> `nginx -s reload` 即可,不影响 fulfillment。
+
 ### 4. 初始化品类数据（首次部署必做）
 
 ```bash

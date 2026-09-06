@@ -89,12 +89,15 @@ jobs:
           envs: REF
           script: |
             cd /opt/buildreach
+            # ECS 这台机器上 :80 已被 fulfillment 的 vhost 占用(server_name 同为该 IP),
+            # buildreach 走 :8080。端口必须带上,否则浏览器侧的 API 调用和 /static/ 图
+            # 会打到 :80 → 进 fulfillment 那套。OVH 生产走 OVH_PUBLIC_ORIGIN,不受影响。
             DEPLOY_SKIP_CODE_UPDATE=1 \
             DEPLOY_REF="origin/$REF" \
             IMAGE_TAG=${{ needs.resolve-tag.outputs.image_tag }} \
             IMAGE_REGISTRY=${{ env.ACR_IMAGE_REGISTRY }} \
-            DEPLOY_API_BASE_URL=http://${{ secrets.ECS_HOST }} \
-            DEPLOY_CORS_ORIGINS=http://${{ secrets.ECS_HOST }} \
+            DEPLOY_API_BASE_URL=http://${{ secrets.ECS_HOST }}:8080 \
+            DEPLOY_CORS_ORIGINS=http://${{ secrets.ECS_HOST }}:8080 \
               bash deploy/deploy.sh
 
       - name: 部署结果

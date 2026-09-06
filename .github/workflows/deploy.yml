@@ -161,12 +161,15 @@ jobs:
           script_stop: true
           script: |
             cd /opt/buildreach
+            # ECS 这台机器上 :80 已被 fulfillment 的 vhost 占用(server_name 同为该 IP),
+            # buildreach 走 :8080。端口必须带上,否则浏览器侧的 API 调用和 /static/ 图
+            # 会打到 :80 → 进 fulfillment 那套。OVH 生产走 OVH_PUBLIC_ORIGIN,不受影响。
             DEPLOY_SKIP_CODE_UPDATE=1 \
             DEPLOY_REF=${{ github.sha }} \
             IMAGE_TAG=${{ needs.build.outputs.image_tag }} \
             IMAGE_REGISTRY=${{ env.ACR_IMAGE_REGISTRY }} \
-            DEPLOY_API_BASE_URL=http://${{ secrets.ECS_HOST }} \
-            DEPLOY_CORS_ORIGINS=http://${{ secrets.ECS_HOST }} \
+            DEPLOY_API_BASE_URL=http://${{ secrets.ECS_HOST }}:8080 \
+            DEPLOY_CORS_ORIGINS=http://${{ secrets.ECS_HOST }}:8080 \
               bash deploy/deploy.sh
 
       - name: 部署结果
@@ -175,7 +178,7 @@ jobs:
           if [ "${{ job.status }}" = "success" ]; then
             echo "✅ ECS 部署成功"
             echo "   镜像: ${{ needs.build.outputs.image_tag }}"
-            echo "   地址: http://${{ secrets.ECS_HOST }}"
+            echo "   地址: http://${{ secrets.ECS_HOST }}:8080"
           else
             echo "❌ ECS 部署失败"
           fi
